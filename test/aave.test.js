@@ -11,11 +11,13 @@ contract("PlenaConnectTest", ([]) => {
   let wallet, usdt, erc20Contract, aaveContract;
 
   before(async function () {
+    // Impersonate USDT Holder
     await hre.network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [USDT_HOLDER],
     });
 
+    //aave v3 pool abi
     const aaveABI = [
       {
         inputs: [
@@ -46,6 +48,8 @@ contract("PlenaConnectTest", ([]) => {
         type: "function",
       },
     ];
+
+    //erc 20 abi
     const erc20ABI = [
       {
         inputs: [
@@ -73,17 +77,21 @@ contract("PlenaConnectTest", ([]) => {
       },
     ];
 
+    //Contract instances
     erc20Contract = new ethers.utils.Interface(erc20ABI);
     aaveContract = new ethers.utils.Interface(aaveABI);
 
+    //Creating a new Plena Wallet instance
     wallet = await PlenaWallet.new();
 
     usdt = await IERC20.at(USDT);
 
+    //Transfer 10 USDT to Plena Wallet
     await usdt.transfer(wallet.address, "10000000", { from: USDT_HOLDER });
   });
 
   it("should deposit 10 USDT to AAVE", async function () {
+    //Encode Function Data for Approve
     const approveData = erc20Contract.encodeFunctionData("approve", [
       AAVE_V3_POOL_POLYGON,
       "10000000",
@@ -91,6 +99,7 @@ contract("PlenaConnectTest", ([]) => {
 
     console.log("approveData", approveData);
 
+    //Encode Function Data for Lend
     const lendData = aaveContract.encodeFunctionData("supply", [
       USDT,
       "10000000",
@@ -142,8 +151,8 @@ contract("PlenaConnectTest", ([]) => {
 
     console.log("approveData", approveData);
 
-    //Encode Function Data
-
+    //Encode Function Data for supply
+    // AAve V3 Pool is supplied with 10 USDT
     const lendData = aaveContract.encodeFunctionData("supply", [
       USDT,
       "10000000",
@@ -185,6 +194,7 @@ contract("PlenaConnectTest", ([]) => {
       }
     );
 
+    // transaction is reverted since the approval amount is less than the amount to be deposited
     expect(tx).to.be.reverted();
   });
 });
